@@ -1,0 +1,13 @@
+application: tropotedo
+version: 3
+runtime: python
+api_version: 1
+
+handlers:
+
+- url: /images
+  static_dir: images
+
+- url: /.*
+  script: main.py
+
