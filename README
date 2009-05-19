@@ -1,0 +1,51 @@
+Silicon Valet is a mashup that combines the following major components
+to deliver users' Google calendars through a speech interface.
+
+- Google App Engine
+- Google Data Services
+- Voxeo's Tropo framework
+
+It is provided here as open software. Feel free to use the code, modify it,
+and improve it.
+
+The name "Silicon Valet" is inspired by it's use of OAuth. OAuth provides
+a framework for working with user data, without having to ask the user for 
+login credentials. Instead, OAuth gives the user a way to authorize the use of 
+of his data, but in a limited, constrained way. This is similar, in spirit, 
+to granting a carhop the use of a special "valet key", that will enable him to ppark your car, but will not permit him to gain access to the car's trunk.
+
+Here are the steps to setting up your own installation of Silicon Valet.
+
+
+0) Learn just enough Python to be dangerous.
+
+1) Set yourself up with a free Google App Engine account
+    (http://code.google.com/appengine/)
+
+2) Begin a new App Engine project. For the purposes of this README file,
+   let's assume that the url of your project is:
+       example.appspot.com 
+
+3) Equip it with a specially-configured installation of Google Data services.
+    (http://code.google.com/appengine/docs/python/howto/usinggdataservices.html)
+
+4) Read up a little bit on OAuth here (http://gdatatips.blogspot.com/2009/04/oauth-in-google-app-engine.html), and follow links to install and configure OAuth libraries. During this phase, you will determine your values for CONSUMER_KEY and CONSUMER_SECRET, that you will fill out in your global variables file, in the next step.
+   
+5) Download the 3 Silicon Valet source files:
+       main.py - the bulk of the code
+       siliconvalet_globals.py.template - 
+            Set CONSUMER_KEY and CONSUMER_SECRET in this template files.                
+       app.yaml.template - Replace "your_application_name" with the 
+         name you told App Engine was the name of your app
+
+6) Sign up for a free Voxeo Tropo account. 
+
+7) Set up a special Tropo application, that will be your own implementation of Silicon Valet. Specify the following, as your application
+   entry point:
+
+     http://example.appspot.com/tropo.py
+
+   where example.appspot.com is the app that you setup in step (1).
+
+
+Once this is all set up, users should be able to sign up for accounts on your App Engine app, and after that, call the phone number assigned to your App by Tropo, to get their calendars read to them.

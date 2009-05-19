@@ -1,0 +1,14 @@
+CONSUMER_KEY = "example.com"
+CONSUMER_SECRET = "xxxx"  # <--- your consumer secret
+
+# The puropose of the lines below is to define the global
+# variable BASE_URL. We choose to define an additional variable
+# called VERSION, so we can distinguish between test and production
+# versions of our app
+VERSION = 3
+
+if (VERSION == 3):
+  BASE_URL = "http://example.appspot.com"
+else:
+  BASE_URL = "http://4.latest.example.appspot.com"
+
