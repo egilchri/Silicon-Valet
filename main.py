@@ -38,6 +38,9 @@ gdata.alt.appengine.run_on_appengine(client)
 
 
 class PhoneTokenStore (gdata.alt.appengine.AppEngineTokenStore):
+    """Here's one of our main OAuth tricks, to adopt OAuth for the phone.
+The issue is, we can\'t assume, like regular OAuth does, that the user
+is logged in to the browser, in their Google account"""
     def find_token(self, url, user):
       if url is None:
         return None
@@ -91,25 +94,25 @@ class PhoneTokenStore (gdata.alt.appengine.AppEngineTokenStore):
 
 
 class PhoneAuth(webapp.RequestHandler):
+  """The Tropo app calls into this class, to get the retrieved Google data.
+The tricky part is we have to use OAuth to authorize the user.
+"""
   def get(self):
-    if (0):
-      self.response.out.write("I am really not a calendar entry")
-      return
-	# **Sat Mar 28 07:05:28 2009** -- egilchri
     logging.info ("Doing a GET in PhoneAuth");
+    # The cellnumber is how we know who's calling
     cellnumber  = self.request.get('cellnumber')
     logging.info ("cellnumber: %s" % cellnumber)
 
-    # abuser = users.get_current_user()
-    # logging.info ("abuser: %s" % abuser)
+    # We use the cellnumber to lookup the user
     user = self.get_user_from_cell (cellnumber)
     logging.info ("user: %s" % user)
     store = PhoneTokenStore()
-    # parts = re.split('@', user)
-    #user = parts[0]
     logging.info ("user: %s" % user)
+    # Convert user to the proper data structure for what follows
     user_obj = users.User(user)
 
+    # This is where we lookup the user's token.
+    # with our specialized find_token method
     access_token =  store.find_token(SCOPE, user_obj )
 
     # should hava a token by now
@@ -120,6 +123,9 @@ class PhoneAuth(webapp.RequestHandler):
 
     logging.info ("Wait for it")
     if (1):
+      # We stuff the token in the client object
+      # I guess this is the Valet grabbing the key off the rack
+      # and sticking it in his pocket.
       client.current_token = access_token
       client.cellnumber = cellnumber
       client.user = user
@@ -132,20 +138,18 @@ class PhoneAuth(webapp.RequestHandler):
         ''')
 #   
       else:
+        # Ok, we're all authorized, so let's fetch the user's data
         self.redirect('/fetch_data')
 
-  def get_access_token (self, cellnumber):
-    user = "egilchri"
-    dict = self.load_auth_tokens (user)
-    return dict
-
   def get_user_from_cell (self, cellnumber):
-      users =  CellUser.all().filter('cellnumber =', cellnumber)
-      user = users[0].id
-      return user
-
+    """The CellUser db object associates users with cellnumbers"""
+    users =  CellUser.all().filter('cellnumber =', cellnumber)
+    user = users[0].id
+    return user
 
 class MyTokenStore(atom.token_store.TokenStore):
+  """This is where I store the token in a db table, for later use.
+"""
   def add_token(self, token):
     """Adds a new token to the store (replaces tokens with the same scope)."""
     logging.info ("Storing the old token")
@@ -153,12 +157,19 @@ class MyTokenStore(atom.token_store.TokenStore):
     
 
 class CellUser(db.Model):
+  """Basic info about the user. timezone is so we know which day it is,
+locally.
+"""
   id = db.StringProperty(required=True)
   cellnumber = db.StringProperty(required=False)
   timezone = db.StringProperty(required=False)
   oauth_token = db.StringProperty(required=False)
 
 class Hello(webapp.RequestHandler):
+  """Introductory greetings to our user. After the initial signup, 
+the user won't have any need to come back here again. (Although later,
+we should write some code to let the user edit their profile, etc.)
+"""
   def get(self):
     logging.info ("Doing a GET in Hello");
     self.response.headers['Content-Type'] = 'text/html'
@@ -201,6 +212,9 @@ alt="Powered by Voxeo" />
 
 
 class Register(webapp.RequestHandler):
+  """During registration, the user will need to login to our App. It's
+part of the initial OAuth dance.
+"""
   def get(self):
     logging.info ("Doing a GET in Register");
     if not users.get_current_user():
@@ -210,6 +224,8 @@ class Register(webapp.RequestHandler):
       self.redirect(users.create_logout_url(self.request.uri))
 
 class MobileInstruct(webapp.RequestHandler):
+  """A few instructions to give, after the initial signup.
+"""
   def get(self):
     logging.info ("Doing a GET in MobileInstruct");
     self.response.headers['Content-Type'] = 'text/html'
@@ -397,23 +413,11 @@ class FetchData(webapp.RequestHandler):
     else:
       feed = client.GetCalendarEventFeed()
       
-    if (0):
-      self.response.out.write('<ul>')
-      for entry in feed.entry:
-        self.response.out.write('<li>' + entry.title.text + '</li>')
-        self.response.out.write('</ul>')
-    else:
-      self.response.out.write(feed)
+    self.response.out.write(feed)
 
   def get(self):
     logging.info ("Doing a GET in FetchDate");
-    if (0):
-      self.response.out.write("I am not a calendar entry")
-      return
-    if (0):
-      self.response.headers['Content-Type'] = 'text/html'
-    else:
-      self.response.headers['Content-Type'] = 'text/xml'
+    self.response.headers['Content-Type'] = 'text/xml'
 
     # Fetch the user's data
     if (FEED_TYPE == 'docs'):
@@ -424,20 +428,12 @@ class FetchData(webapp.RequestHandler):
         if feed:
           break
     else:
+      # Allow for it to fail a bunch of times
       for i in range (1,15):
         feed = client.GetCalendarEventFeed()
         if feed:
           break
-    if (0):
-      self.response.out.write('<ul>')
-      logging.info('<ul>')
-      for entry in feed.entry:
-        logging.info('<li>' + entry.title.text + '</li>')
-        self.response.out.write('<li>' + entry.title.text + '</li>')
-        self.response.out.write('</ul>')
-        logging.info('</ul>')
-    else:
-      self.response.out.write(feed)
+    self.response.out.write(feed)
 
   def GetOneDayCalendar(self, client):
     cellnumber = client.cellnumber
@@ -464,11 +460,14 @@ class FetchData(webapp.RequestHandler):
 
     query = gdata.calendar.service.CalendarEventQuery('default', 'private', 'full', params={'orderby':'starttime', 'sortorder': 'ascending'})
     #query.orderby = "starttime" 
-    startx = self.time_zone(my_zone)
-    endx = self.time_zone(my_zone + 24)
+    real_startx = self.time_zone(my_zone)
+    real_endx = self.time_zone(my_zone + 24)
+    startx = self.time_zone(my_zone - 12)
+    endx = self.time_zone(my_zone + 36)
     logging.info ("startx: %s endx: %s" % (startx, endx))
     query.start_min = startx
     query.start_max = endx
+    query.ctz='America/New_York'
     feed = client.CalendarQuery(query)
     logging.info ("feed: %s" % feed)
     # return feed
@@ -483,6 +482,7 @@ class FetchData(webapp.RequestHandler):
       result = "You don't have any events today. What. Ever."
       return result
 
+    # result = "Your start time is %s" % startx
     for an_event in feed.entry:
       title = an_event.title.text
       when_count = 0
@@ -490,6 +490,12 @@ class FetchData(webapp.RequestHandler):
         when_count += 1
         #print '\t\tStart time: %s' % (a_when.start_time,)
         start = a_when.start_time
+        if ((start < real_startx) or (start > real_endx)):
+          logging.info ("That time just is not right: %s : %s : %s :%s" % (title, start, real_startx, real_endx))
+          break
+        else:
+          logging.info ("That time is looking good: %s : %s " % (title, start))
+        #  continue
         logging.info ("starttime: %s whencount: %s" % (start, when_count))
         start = start.split(".")[0]
         try:
@@ -556,6 +562,9 @@ class FetchData(webapp.RequestHandler):
     return user
 
 class FakeTropo(webapp.RequestHandler):
+  """The purpose of this class is to test code running in the Tropo class.
+At least we can do some basic syntax checking.
+  """
   def get(self):
     if (0):
       self.response.out.write("I am really truly not a calendar entry")
@@ -609,8 +618,19 @@ class FakeTropo(webapp.RequestHandler):
 
 
 
+
 class Tropo(webapp.RequestHandler):
+  """This is the class for our Tropo application. Since the GET method,
+below, simply spits out Python code, I've found it convenient to create 
+a corresponding class called FakeTropo, where it is easier to do basic
+debugging, especially syntax checking.
+"""
   def get(self):
+    """This is the code the gets run when the user first calls up Tropo.It's job
+is to spit out a valid Python script. Inside the Python script are special
+calls to Tropo functions that perform key telephony operations.
+
+"""
     logging.info ("Doing a GET in Tropo");
     if (0):
           self.response.out.write("""
@@ -624,6 +644,7 @@ from xml.dom import minidom, Node
 import re
 
 def getText(nodelist):
+# This function does some basic text filtering
   dollars = re.compile( '\$\S+')
   rc = ""
   for node in nodelist:
@@ -641,6 +662,8 @@ s_log_prefix = "Log: "
 cid = currentCall.callerID
 wait (100)
 say("Howdy")
+# Sometimes we have to spell things funny to get them pronounced
+# the way we like.
 say( "Welcome to Silicon Vah Lay" )
 s_xml_speak_start ="<?xml version='1.0'?><speak>"
 s_say_as_speak_end = "</say-as></speak>"
@@ -650,10 +673,7 @@ s_say_as_speak_end = "</say-as></speak>"
 s_phone_say_as = "<say-as interpret-as='vxml:phone'>"
 
 s_prompt = s_xml_speak_start + s_phone_say_as + cid + s_say_as_speak_end
-# prompt ("Your phone number is")
-# prompt (s_prompt)
 
-#hello_url = 's/hello?cellnumber=' + cid
 hello_url = '%s/googlephone.py?cellnumber=' + cid
 for i in range (1,15):
    urlRead  = urllib2.urlopen(hello_url)
@@ -663,33 +683,11 @@ for i in range (1,15):
    wait(500)
 log ("ze content: " + content)
    
-# from FakeTropo
-if (0):
-  xml = minidom.parseString( content )
-  stats = xml.getElementsByTagName("status")
-  for stat in stats:
-       textNode = (stat.getElementsByTagName("text")[0])
-       user = (stat.getElementsByTagName("user")[0])
-       usernNode = (user.getElementsByTagName("name")[0])
-       text = getText(textNode.childNodes)
-       log ("text: " + text)
-       goofytext = p.sub ('tiny url', text)
-       log ("goofytext:" + goofytext)
-       name = getText(usernNode.childNodes)
-       prompt (name)
-       wait (200)
-       prompt (goofytext)
-       wait (500)
-else:
-  prompt (content)
-# end from FakeTropo
-#   log ("data: " + data)
-# say( "Goodbye!" )
+prompt (content)
 say("That's totally all.")
 say( "Like." )
 wait (100)
 say( "Bye bye." )
-
 
 hangup()
 
@@ -707,6 +705,9 @@ def my_explode(str, label):
     logging.info ("Char: %s" % char)
 
 def event_sort(x, y):
+  """This is how we sort the events by start time. I haven't figured 
+out how to do that in the Gdata API.
+"""
   logging.info ("event_sort %s %s" % (x, y))
   xtitle = x.title.text
   ytitle = y.title.text
