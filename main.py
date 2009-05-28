@@ -22,11 +22,8 @@ import pickle
 
 SIG_METHOD = gdata.auth.OAuthSignatureMethod.HMAC_SHA1
 
-#FEED_TYPE = 'docs'
-# FEED_TYPE = 'calendar'
-FEED_TYPE = 'one_day_calendar'
 
-if (FEED_TYPE == 'docs'):
+if (siliconvalet_globals.FEED_TYPE == 'docs'):
   client = gdata.docs.service.DocsService(source='Botcast Network-TropoTedo-v1')
   SCOPE = 'http://docs.google.com/feeds/'
 else:
@@ -406,9 +403,9 @@ class FetchData(webapp.RequestHandler):
       self.response.headers['Content-Type'] = 'text/xml'
 
     # Fetch the user's data
-    if (FEED_TYPE == 'docs'):
+    if (siliconvalet_globals.FEED_TYPE == 'docs'):
       feed = client.GetDocumentListFeed()
-    elif (FEED_TYPE == 'one_day_calendar'):
+    elif (siliconvalet_globals.FEED_TYPE == 'one_day_calendar'):
       feed = self.GetOneDayCalendar(client)
     else:
       feed = client.GetCalendarEventFeed()
@@ -420,9 +417,9 @@ class FetchData(webapp.RequestHandler):
     self.response.headers['Content-Type'] = 'text/xml'
 
     # Fetch the user's data
-    if (FEED_TYPE == 'docs'):
+    if (siliconvalet_globals.FEED_TYPE == 'docs'):
       feed = client.GetDocumentListFeed()
-    elif (FEED_TYPE == 'one_day_calendar'):
+    elif (siliconvalet_globals.FEED_TYPE == 'one_day_calendar'):
       for i in range (1,15):
         feed = self.GetOneDayCalendar(client)
         if feed:
@@ -463,7 +460,7 @@ class FetchData(webapp.RequestHandler):
     real_startx = self.time_zone(my_zone)
     real_endx = self.time_zone(my_zone + 24)
     startx = self.time_zone(my_zone - 12)
-    endx = self.time_zone(my_zone + 36)
+    endx = self.time_zone(my_zone + 48)
     logging.info ("startx: %s endx: %s" % (startx, endx))
     query.start_min = startx
     query.start_max = endx
