@@ -731,5 +731,6 @@ def main():
                                         ('/fetch_data', FetchData)], debug=True)
   run_wsgi_app(application)
 
+#comment
 if __name__ == "__main__":
   main()
