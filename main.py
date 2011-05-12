@@ -10,7 +10,7 @@ import gdata.docs.service
 import gdata.calendar.service
 import gdata.alt.appengine
 
-# new ted start
+# new ted start test
 import datetime, time
 from google.appengine.ext import db
 import logging
